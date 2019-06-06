@@ -35,13 +35,10 @@ type
   end;
 
 const
-  AccessKeyDefault = 'AKIAI2CQTPN44I3LQSSQ';
-  SecretKeyDefault = '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';
+  AccessKeyDefault = 'MyKey';
+  SecretKeyDefault = 'MySecretKey';
 
 implementation
-
-Uses
-  SIGData.Utils;
 
 { TAws }
 
@@ -188,7 +185,7 @@ begin
     sFile := AFile;
 
     try
-      //Download do arquivo para a variávei FStream
+      //Download do arquivo para a variï¿½vei FStream
       getS3.GetObject(ABucket, sFile, FStream);
       FStream.Position := 0;
 
