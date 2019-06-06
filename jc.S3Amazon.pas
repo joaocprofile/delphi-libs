@@ -40,6 +40,9 @@ const
 
 implementation
 
+Uses
+  Jc.Utils;
+
 { TAws }
 
 class function TAws.Instance: TAws;
