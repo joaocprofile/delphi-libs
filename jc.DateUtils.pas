@@ -7,6 +7,7 @@ uses
 
   function DateToText(ADate: TDateTime): string;
   Function DateTimeToText(ADateTime: TDateTime): string;
+  function TextToDate(ADate: string): TDateTime;
 
 implementation
 
