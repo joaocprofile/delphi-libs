@@ -45,7 +45,7 @@ constructor TjcLog.Create;
 begin
   FCustomMsg := EmptyStr;
 
-  FDirPath := getApplicationPath + 'logs' + PathDelim;
+  FDirPath := getPathApplication + 'logs' + PathDelim;
   if not DirectoryExists(FDirPath) then
     CreateDir(FDirPath);
 end;
