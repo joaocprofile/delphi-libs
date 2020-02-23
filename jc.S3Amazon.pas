@@ -1,4 +1,4 @@
-unit jc.S3Amazon;
+﻿unit jc.S3Amazon;
 
 interface
 
@@ -13,30 +13,26 @@ type
     FConnection: TAmazonConnectionInfo;
     FS3: TAmazonStorageService;
     FS3Region:  TAmazonRegion;
+    FAccessKey: String;
+    FSecretKey: String;
 
-    FendPoint: string;
-    Fregion: string;
-
-    procedure PrivateDestroy;
-    procedure PrivateCreate;
+    FRegion: string;
+    FEndPoint: string;
   public
-    class function Instance: TAws;
+    constructor create(const AccessKey, SecretKey: String);
+    destructor destroy; override;
+    class function New(): TAws; overload;
+    class function New(const AccessKey, SecretKey: String): TAws; overload;
 
     function getEndPoint: String;
-    function getS3: TAmazonStorageService;
-    function key(const AccessKey, SecretKey: String): TAws;
-
+    function getRegion: String;
+    function GetAmazonStorage: TAmazonStorageService;
     function getBuckets: TStrings;
     function getBucket(AName: String): TAmazonBucketResult;
-
     function DownloadObject(const ABucket, AFile, AOutPath: string): boolean;
     function UploadObject(const ABucket, AFile, AFileName: string): boolean;
     function DeleteObject(const ABucket, AFile: string): boolean;
   end;
-
-const
-  AccessKeyDefault = 'MyKey';
-  SecretKeyDefault = 'MySecretKey';
 
 implementation
 
@@ -45,47 +41,60 @@ Uses
 
 { TAws }
 
-class function TAws.Instance: TAws;
+constructor TAws.create(const AccessKey, SecretKey: String);
 begin
-  if FInstance = nil then
-  begin
-    FInstance := TAws.Create;
-    FInstance.PrivateCreate;
-  end;
+  FAccessKey := AccessKey;
+  FSecretKey := SecretKey;
 
-  result := FInstance;
-end;
-
-procedure TAws.PrivateCreate;
-begin
   FConnection := TAmazonConnectionInfo.Create(nil);
-  FConnection.AccountName := AccessKeyDefault;
-  FConnection.AccountKey := SecretKeyDefault;
+  FConnection.AccountName := FAccessKey;
+  FConnection.AccountKey := FSecretKey;
 
   FS3 := TAmazonStorageService.Create(FConnection);
-  FRegion := TAmazonStorageService.GetRegionString(FS3Region);
-  FendPoint := FConnection.StorageEndpoint;
+  FRegion        := TAmazonStorageService.GetRegionString(FS3Region);
+  FEndPoint      := FConnection.StorageEndpoint;
 end;
 
-procedure TAws.PrivateDestroy;
+destructor TAws.destroy;
 begin
   if Assigned(FConnection) then
     FreeAndNil(FConnection);
 
   if Assigned(FS3) then
     FreeAndNil(FS3);
+
+  inherited;
 end;
 
-function TAws.key(const AccessKey, SecretKey: String): TAws;
+class function TAws.New(): TAws;
 begin
-  FConnection.AccountName := AccessKey;
-  FConnection.AccountKey := SecretKey;
+  if not Assigned(FInstance) then
+    raise Exception.Create('Primeiro, use o construtor new com parâmetros AccessKey e SecretKey');
+  
   result := FInstance;
+end;
+
+class function TAws.New(const AccessKey, SecretKey: String): TAws;
+begin
+  if FInstance = nil then
+    FInstance := TAws.Create(AccessKey, SecretKey);
+
+  result := FInstance;
+end;
+
+function TAws.getEndPoint: String;
+begin
+  result := FendPoint;
+end;
+
+function TAws.getRegion: String;
+begin
+  Result := Fregion;
 end;
 
 function TAws.getBucket(AName: String): TAmazonBucketResult;
 begin
-  result := getS3.GetBucket(AName, nil);
+  result := GetAmazonStorage.GetBucket(AName, nil);
 end;
 
 function TAws.getBuckets: TStrings;
@@ -94,18 +103,13 @@ var
 begin
   ResponseInfo := TCloudResponseInfo.Create;
   try
-    result := getS3.ListBuckets(ResponseInfo);
+    result := GetAmazonStorage.ListBuckets(ResponseInfo);
   finally
     ResponseInfo.Free;
   end;
 end;
 
-function TAws.getEndPoint: String;
-begin
-  result := FendPoint;
-end;
-
-function TAws.getS3: TAmazonStorageService;
+function TAws.GetAmazonStorage: TAmazonStorageService;
 begin
   result := FS3;
 end;
@@ -136,12 +140,14 @@ begin
           Headers.Add('Content-Type=image/jpeg')
         else if ExtractFileExt(AFileName) = '.png' then
           Headers.Add('Content-Type=image/png')
+        else if ExtractFileExt(AFileName) = '.zip' then
+          Headers.Add('Content-type=application/zip')
         else
           Meta.Add('Content-type=text/xml');
 
         //Faz o upload
         try
-          getS3.UploadObject(ABucket, AFileName, FileContent, False, Meta, Headers, amzbaPublicRead);
+          GetAmazonStorage.UploadObject(ABucket, AFileName, FileContent, False, Meta, Headers, amzbaPublicRead);
           result := true;
         except
           on E:Exception do
@@ -164,10 +170,12 @@ begin
     end;
 end;
 
+
+
 function TAws.DeleteObject(const ABucket, AFile: string): boolean;
 begin
     try
-      getS3.DeleteObject(ABucket, AFile);
+      GetAmazonStorage.DeleteObject(ABucket, AFile);
       result := true;
     except
       on E:Exception do
@@ -189,7 +197,7 @@ begin
 
     try
       //Download do arquivo para a vari�vei FStream
-      getS3.GetObject(ABucket, sFile, FStream);
+      GetAmazonStorage.GetObject(ABucket, sFile, FStream);
       FStream.Position := 0;
 
       //Permite selecionar a pasta
@@ -208,7 +216,6 @@ initialization
 finalization
   if TAws.FInstance <> nil then
   begin
-    TAws.FInstance.PrivateDestroy;
     TAws.FInstance.Free;
     TAws.FInstance := nil
   end;

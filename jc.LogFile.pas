@@ -12,10 +12,12 @@ type
     class var FSender: TObject;
     FCustomMsg: String;
     FDirPath: String;
+    FFileName: string;
   public
     constructor Create;
     destructor Destroy; override;
-    class function New(Sender: TObject = nil; E: Exception = nil): IJcLog;
+    class function New(Sender: TObject = nil; E: Exception = nil): IJcLog; overload;
+    class function New(AFileName: String = ''): IJcLog; overload;
 
     function CatchException(Sender: TObject; E: Exception): IJcLog;
     function CustomMsg(Msg: String): IJcLog;
@@ -37,6 +39,14 @@ begin
     FError := E;
   if Sender <> nil then
     FSender := Sender;
+
+  Result := Self.Create;
+end;
+
+class function TjcLog.New(AFileName: String): IJcLog;
+begin
+  if trim(AFileName) <> '' then
+    FFileName := AFileName;
 
   Result := Self.Create;
 end;
@@ -75,51 +85,67 @@ end;
 function TjcLog.SaveLog(Alog: String = ''): IJcLog;
 var
   tFile: TextFile;
-  FileName: string;
 begin
   result := self;
-  FileName := FormatDateTime('dd-mm-yyyy', now) + '_log' + '.txt';
-  AssignFile(tFile, FDirPath + FileName);
-  try
-    if FileExists(FDirPath + FileName) then
-      Append(tFile)
-    else
-      ReWrite(tFile);
 
-    if FCustomMsg <> EmptyStr then
-      WriteLn(tFile, FormatDateTime('hh:mm:ss', Now) +' '+ FCustomMsg)
-    else
-      WriteLn(tFile, FormatDateTime('hh:mm:ss', Now) +' '+ Alog);
+  if FFileName = EmptyStr then
+    FFileName := FormatDateTime('dd-mm-yyyy', now) + '_log' + '.txt';
 
-  finally
-    CloseFile(tFile);
-  end;
+  FFileName := FDirPath + FFileName;
+  TThread.Queue(nil,
+    procedure
+    begin
+      AssignFile(tFile, FFileName);
+      try
+        if FileExists(FFileName) then
+          Append(tFile)
+        else
+          ReWrite(tFile);
+
+        if FCustomMsg <> EmptyStr then
+          WriteLn(tFile, FormatDateTime('hh:mm:ss', Now) +' '+ FCustomMsg)
+        else
+          WriteLn(tFile, FormatDateTime('hh:mm:ss', Now) +' '+ Alog);
+
+      finally
+        CloseFile(tFile);
+      end;
+    end
+  );
+
 end;
 
 function TjcLog.SaveError: IJcLog;
 var
   tFile: TextFile;
-  FileName: string;
 begin
   result := self;
-  FileName := FormatDateTime('dd-mm-yyyy', now) + '_errors' + '.txt';
-  AssignFile(tFile, FDirPath + FileName);
-  try
-    if FileExists(FDirPath + FileName) then
-      Append(tFile)
-    else
-      ReWrite(tFile);
+  if FFileName = EmptyStr then
+    FFileName := FormatDateTime('dd-mm-yyyy', now) + '_errors' + '.txt';
 
-    WriteLn(tFile, 'Time.............: ' + FormatDateTime('hh:mm:ss', Now));
-    WriteLn(tFile, 'Message..........: ' + FCustomMsg);
-    WriteLn(tFile, 'Error............: ' + FError.Message);
-    WriteLn(tFile, 'Class Exception..: ' + FError.ClassName);
-    WriteLn(tFile, 'User.............: ' + '');
-    WriteLn(tFile, 'Windows Version..: ' + '');
-    WriteLn(tFile, '');
-  finally
-    CloseFile(tFile);
-  end;
+  FFileName := FDirPath + FFileName;
+  TThread.Queue(nil,
+    procedure
+    begin
+      AssignFile(tFile, FFileName);
+      try
+        if FileExists(FFileName) then
+          Append(tFile)
+        else
+          ReWrite(tFile);
+
+        WriteLn(tFile, 'Time.............: ' + FormatDateTime('hh:mm:ss', Now));
+        WriteLn(tFile, 'Message..........: ' + FCustomMsg);
+        WriteLn(tFile, 'Error............: ' + FError.Message);
+        WriteLn(tFile, 'Class Exception..: ' + FError.ClassName);
+        WriteLn(tFile, 'User.............: ' + '');
+        WriteLn(tFile, 'Windows Version..: ' + '');
+        WriteLn(tFile, '');
+      finally
+        CloseFile(tFile);
+      end;
+    end
+  );
 
 end;
 

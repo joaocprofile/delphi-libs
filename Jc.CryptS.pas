@@ -22,10 +22,11 @@ type
     function TextToCriptoHex(SText: string): string;
     function CriptoBinToText(SText: string): string;
     function CriptoHexToText(SText: string): string;
-
-    procedure PrivateCreate;
   public
-    class function Instance(): TCryptS;
+    constructor Create(const Key: String); overload;
+    constructor Create(); overload;
+    destructor Destroy; override;
+    class function New(const Key: String = ''): TCryptS;
 
     function Crypt(AValue: String): String;
     function Decrypt(AValue: String): String;
@@ -33,33 +34,43 @@ type
 
 implementation
 
-class function TCryptS.Instance: TCryptS;
+constructor TCryptS.Create(const Key: String);
+begin
+  FKey := Key;
+end;
+
+constructor TCryptS.Create;
+begin
+  FKey := 'YUQL23KL23DF90WI5E1JAS467NMCXXL6JAOAUWWMCL0AOMM4A4VZYW9KHJUI2347EJHJKDF3424SKL';
+end;
+
+destructor TCryptS.Destroy;
+begin
+
+  inherited;
+end;
+
+class function TCryptS.New(const Key: String): TCryptS;
 begin
   if FInstance = nil then
   begin
-    FInstance := TCryptS.Create;
-
-    FInstance.PrivateCreate;
+    if Key.Trim <> '' then
+      FInstance := TCryptS.Create(Key)
+    else
+      FInstance := TCryptS.Create;
   end;
 
   result := FInstance;
 end;
 
-procedure TCryptS.PrivateCreate;
-begin
-  FKey := 'YUQL23KL23DF90WI5E1JAS467NMCXXL6JAOAUWWMCL0AOMM4A4VZYW9KHJUI2347EJHJKDF3424SKL';
-end;
-
 function TCryptS.Crypt(AValue: String): String;
 begin
-  self.Instance;
-  Result := FInstance.TextToCriptoHex(AValue)
+  Result := TextToCriptoHex(AValue)
 end;
 
 function TCryptS.Decrypt(AValue: String): String;
 begin
-  self.Instance;
-  Result := FInstance.CriptoHexToText(AValue)
+  Result := CriptoHexToText(AValue)
 end;
 
 function TCryptS.TextToCriptoBin(SText: string): string;
@@ -129,7 +140,6 @@ begin
   Number := Number div 16;
   Result := Copy('0123456789ABCDEF', (Number mod 16) + 1, 1) + Result
 end;
-
 
 function TCryptS.HexToDec(Number: string): Byte;
 begin

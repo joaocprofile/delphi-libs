@@ -3,21 +3,22 @@ unit jc.Utils;
 interface
 
 uses
-  Windows, Messages, SysUtils, Classes, TypInfo,
-  DBClient, DB, DateUtils, ShellAPI, ShlObj;
+  Windows, Messages, SysUtils, Classes;
 
   function getPathApplication(ACustomDir: String = '';
                               ACustomFile: String = ''): String;
-  Function getStringNameEXE(const Filename: String): String;
+  Function getStringNameEXE(const ACustomFile: String = ''): String;
+  Function ExtractName(const Filename: String): String;
 
   function getPcName: string;
   function GePcUserName: string;
-  function getPlatform: String;
+  function getOSPlatform: String;
 
   function ReadString(SymbolSeparator: String; Value: String): String;
   function RemoveString(SymbolSeparator: String; Value: String): String;
-  function getHostNameOfEmail(AEmail: String): String;
-  function getProviderOfEmail(AEmail: String): String;
+  function getNumberSymbolSeparator(Asep, AValue: string): Integer;
+  function getDomain(AEmail: String): String;
+  function getHostName(AEmail: String): String;
 
   function LineCount(AFile: String; AFlag: String = ''): Integer;
   function SymbolCount(const subtext: string; Text: string): Integer;
@@ -25,6 +26,9 @@ uses
   function UpperFirstLetter(sNome: String): string;
 
 implementation
+
+uses
+  System.RegularExpressions;
 
 function getPathApplication(ACustomDir: String = ''; ACustomFile: String = ''): String;
 {$IFDEF MSWINDOWS}
@@ -53,7 +57,30 @@ begin
   end;
 end;
 
-Function getStringNameEXE(const Filename: String): String;
+Function getStringNameEXE(const ACustomFile: String = ''): String;
+var
+  aExt : String;
+  aPos : Integer;
+  aExeName : String;
+begin
+  if trim(ACustomFile) = '' then
+    aExeName := ParamStr(0)
+  else
+    aExeName := ACustomFile;
+
+  aExt := ExtractFileExt(aExeName);
+  Result := ExtractFileName(aExeName);
+  if aExt <> '' then
+  begin
+    aPos := Pos(aExt, Result);
+    if aPos > 0 then
+    begin
+      Delete(Result,aPos, Length(aExt));
+    end;
+  end;
+end;
+
+Function ExtractName(const Filename: String): String;
 var
   aExt : String;
   aPos : Integer;
@@ -62,7 +89,7 @@ begin
   Result := ExtractFileName(Filename);
   if aExt <> '' then
   begin
-    aPos := Pos(aExt, Result);
+    aPos := Pos(aExt,Result);
     if aPos > 0 then
     begin
       Delete(Result,aPos, Length(aExt));
@@ -85,7 +112,6 @@ begin
      While not Eof(f) do
      begin
        Readln(f, sLinha);
-
        if not AFlag.IsEmpty then
        begin
          sflag := copy(sLinha, 1, AFlag.Length);
@@ -118,12 +144,13 @@ var
   xStr : String;
 begin
  xStr := '';
- for i:= 1 to Length(Trim(Value)) do
-   if (Pos(Copy(Value,i,1), '/-.) (,"{}[]')=0) then xStr := xStr + Value[i];
+ for i := 1 to Length(Value) do
+ begin
+   if (Pos(Copy(Value, i, 1), '/-.)(,"{}[]') = 0) then
+     xStr := xStr + Value[i];
+ end;
 
- xStr := StringReplace(xStr,' ','',[rfReplaceAll]);
-
- Result:= Trim(xStr);
+ Result:= xStr;
 end;
 
 function ReadString(SymbolSeparator: String; Value: String): String;
@@ -137,7 +164,17 @@ begin
   result := Value;
 end;
 
-function getHostNameOfEmail(AEmail: String): String;
+function getNumberSymbolSeparator(Asep, AValue: string): Integer;
+begin
+  result := TRegEx.Matches(AValue, Asep).Count;
+end;
+
+function getDomain(AEmail: String): String;
+begin
+  result := Copy (AEmail, Pos ('@', AEmail) + 1, Length(AEmail));
+end;
+
+function getHostName(AEmail: String): String;
 var
   lHost: string;
 begin
@@ -145,10 +182,6 @@ begin
   result := trim( LowerCase( Copy(lHost, 1, pos('.', lHost)-1) ) );
 end;
 
-function getProviderOfEmail(AEmail: String): String;
-begin
-  result := Copy (AEmail, Pos ('@', AEmail) + 1, Length(AEmail));
-end;
 
 function UpperFirstLetter(sNome: String): string;
 const
@@ -187,7 +220,7 @@ begin
   SetLength(result, Size - 1);
 end;
 
-function getPlatform: String;
+function getOSPlatform: String;
 const
   PROCESSOR_ARCHITECTURE_INTEL = $0000;
   PROCESSOR_ARCHITECTURE_IA64 = $0006;
