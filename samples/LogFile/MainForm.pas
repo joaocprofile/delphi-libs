@@ -39,7 +39,7 @@ uses jc.LogFile;
 procedure TMain_Form.Button1Click(Sender: TObject);
 begin
   TjcLog.New
-    .SaveLog('to say hello !');
+    .SaveLog('to say hello !')
 end;
 
 procedure TMain_Form.Button2Click(Sender: TObject);

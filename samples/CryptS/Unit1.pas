@@ -33,8 +33,8 @@ uses Jc.CryptS;
 
 procedure TForm1.Button1Click(Sender: TObject);
 begin
-  edit2.Text := TCryptS.instance.Crypt(edit1.Text);
-  edit3.Text := TCryptS.instance.Decrypt(edit2.Text);
+  edit2.Text := TCryptS.New.Crypt(edit1.Text);
+  edit3.Text := TCryptS.New.Decrypt(edit2.Text);
 end;
 
 end.
